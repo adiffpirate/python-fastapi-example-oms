@@ -2,18 +2,19 @@
 name = "app"
 version = "0.1.0"
 dependencies = [
-    "fastapi",
-    "uvicorn",
-    "sqlalchemy",
-    "psycopg2-binary",
-    "pydantic",
-    "alembic",
+    "fastapi==0.136.0",
+    "uvicorn==0.45.0",
+    "SQLAlchemy==2.0.49",
+    "psycopg2-binary==2.9.12",
+    "pydantic==2.13.3",
+    "alembic==1.18.4",
+    "bcrypt==4.0.1",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest",
-    "httpx",
+    "pytest==9.0.3",
+    "httpx==0.28.1",
 ]
 
 [tool.setuptools]

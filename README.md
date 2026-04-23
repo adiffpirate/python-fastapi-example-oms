@@ -58,7 +58,7 @@ source .venv/bin/activate
 
 ```bash
 pip install --upgrade pip
-pip install -e .[dev]
+pip install -e '.[dev]'
 ```
 
 ## 🐘 Running PostgreSQL (Docker)
@@ -160,16 +160,10 @@ This keeps the codebase:
 * easy to extend
 * ready to evolve into microservices if needed
 
-## ⚠️ Notes
-
-* Tests use SQLite (`:memory:`) with `StaticPool`
-* Alembic requires models to be imported in `env.py`
-* No need to install the package globally
-
 ## 📌 Future Improvements
 
 * Order state transitions (finite state machine)
 * Update / delete endpoints
-* Authentication & authorization
+* Authorization
 * Integration tests with PostgreSQL
 * Docker support for full deployment
