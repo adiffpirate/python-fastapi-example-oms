@@ -6,6 +6,7 @@ from . import service, schemas
 
 router = APIRouter()
 
+# TODO: Require user authentication when calling these paths
 
 @router.post("/", response_model=schemas.OrderRead)
 def create_order(payload: schemas.OrderCreate, db: Session = Depends(get_db)):

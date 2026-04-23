@@ -16,7 +16,13 @@ Alembic for migrations, and SQLite for fast unit tests.
 │   ├── db/
 │   │   └── session.py
 │   └── modules/
-│       └── orders/
+│       ├── orders/
+│       │   ├── models.py
+│       │   ├── schemas.py
+│       │   ├── repository.py
+│       │   ├── service.py
+│       │   └── routes.py
+│       └── users/
 │           ├── models.py
 │           ├── schemas.py
 │           ├── repository.py

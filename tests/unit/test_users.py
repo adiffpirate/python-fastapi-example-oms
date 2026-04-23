@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.modules.users.repository import create_user, get_user_by_username, verify_password
 from app.modules.users.service import authenticate_user
 
+# TODO: Create test to check if long passwords with 50 chars works just fine
 
 def test_create_user(db: Session):
     # Test creating a new user
@@ -11,6 +12,7 @@ def test_create_user(db: Session):
     assert user.username == "testuser"
     assert user.id is not None
 
+    # TODO: Move hashing verification into its own test
     # Test that password was hashed
     assert user.hashed_password != "password123"
 

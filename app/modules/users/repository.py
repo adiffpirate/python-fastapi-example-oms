@@ -5,6 +5,8 @@ import hashlib
 
 
 def create_user(db: Session, username: str, password: str):
+    # TODO: Add password strength check, should be long (20+ chars) OR complex (with uppercase, lowercase, numbers and symbols)
+
     # Hash the password with bcrypt
     # bcrypt has a 72-byte limit, so we'll hash long passwords with SHA-256 first
     if len(password) > 72:

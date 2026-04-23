@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from . import repository, schemas
 from fastapi import HTTPException, status
 
+# TODO: Evaluate if the logic to check for user existance should actually be here
 
 def create_user(db: Session, username: str, password: str):
     # Check if user already exists
