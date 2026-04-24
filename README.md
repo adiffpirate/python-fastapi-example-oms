@@ -13,6 +13,7 @@ Alembic for migrations, and SQLite for fast unit tests.
 │   ├── api/
 │   │   └── router.py
 │   ├── core/
+│   │   └── config.py
 │   ├── db/
 │   │   └── session.py
 │   └── modules/
@@ -28,10 +29,10 @@ Alembic for migrations, and SQLite for fast unit tests.
 │           ├── repository.py
 │           ├── service.py
 │           └── routes.py
-│
 ├── alembic/
 ├── tests/
-│   └── unit/
+│   ├── unit/
+│   └── integration/
 ├── pyproject.toml
 └── README.md
 ```
@@ -69,9 +70,11 @@ pip install -e '.[dev]'
 
 ## 🐘 Running PostgreSQL (Docker)
 
-Start a local PostgreSQL instance:
+Start a fresh local PostgreSQL instance:
 
 ```bash
+docker stop postgres-dev || true
+docker rm postgres-dev || true
 docker run -d \
   --name postgres-dev \
   -e POSTGRES_USER=postgres \
@@ -123,10 +126,20 @@ http://localhost:8000/docs
 
 ## 🧪 Running Tests
 
-Tests use **SQLite in-memory**, so no database setup is required.
+### Unit Tests
+
+> Uses SQLite in-memory, so no database setup is required.
 
 ```bash
-pytest
+pytest tests/unit
+```
+
+### Integration Tests
+
+> Fresh PostgreSQL instance with migrations applied is required.
+
+```bash
+pytest tests/integration
 ```
 
 ## 🔌 Example API Usage

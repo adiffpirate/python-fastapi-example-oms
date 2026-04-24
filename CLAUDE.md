@@ -12,7 +12,8 @@ The application is organized in a modular monolith with clear separation:
 - `app.db.session`: Database session management
 - `app.modules.orders`: Complete order module with models, schemas, repository, service, routes
 - `alembic`: Database migration tool
-- `tests`: Unit tests (SQLite in-memory)
+- `tests/unit`: Unit tests (SQLite in-memory)
+- `tests/integration`: Integration tests (PostgreSQL)
 
 ## Key Development Commands
 
@@ -24,10 +25,21 @@ source .venv/bin/activate  # Windows: .venv\Scripts\Activate.ps1
 
 # Install dependencies
 pip install --upgrade pip
-pip install -e .[dev]
+pip install -e '.[dev]'
 
-# Run API
-uvicorn app.main:app --reload
+# Run fresh database
+docker stop postgres-dev || true
+docker rm postgres-dev || true
+docker run -d \
+  --name postgres-dev \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=app \
+  -p 5432:5432 \
+  postgres:15
+
+# Run API in background
+uvicorn app.main:app --reload &
 ```
 
 **Testing**

@@ -1,16 +1,25 @@
 from logging.config import fileConfig
-import os
-
 from sqlalchemy import engine_from_config, pool
 from alembic import context
-
 from app.db.session import Base
-from app.modules.orders import models  # important
+import os
+import pkgutil
+import importlib
+
+# Dynamically import all 'models' submodules in 'app.modules'
+def import_all_models():
+    import app.modules as modules_pkg
+    # walk_packages looks into subdirectories of app.modules
+    for loader, module_name, is_pkg in pkgutil.walk_packages(
+        modules_pkg.__path__, modules_pkg.__name__ + "."
+    ):
+        # Only import if the submodule ends with '.models'
+        if module_name.endswith(".models"):
+            importlib.import_module(module_name)
+import_all_models()
 
 config = context.config
-
 fileConfig(config.config_file_name)
-
 target_metadata = Base.metadata
 
 
