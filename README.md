@@ -1,188 +1,101 @@
+```
+  ╔══════════════════════════════════════════════════════╗
+  ║                                                      ║
+  ║   Developed with Claude Code                         ║
+  ║   (but using a local model via llama.cpp)            ║
+  ║                                                      ║
+  ╚══════════════════════════════════════════════════════╝
+```
+
 # Order Management System API
 
-A simple, modular FastAPI application for managing orders.
-Built as a **modular monolith** with clean separation of concerns, PostgreSQL for persistence,
-Alembic for migrations, and SQLite for fast unit tests.
+A lightweight, modular FastAPI application for order management.
 
-## 📁 Project Structure
+Built as a modular monolith, the project organizes code by domain (e.g., `orders`, `users`) rather than by technical layers alone.
+It uses PostgreSQL for data storage, Alembic for schema migrations, and SQLite for fast, isolated unit tests.
+The application is containerized with Docker for consistent local development and deployment.
 
-```
-.
-├── app/
-│   ├── main.py
-│   ├── api/
-│   │   └── router.py
-│   ├── core/
-│   │   └── config.py
-│   ├── db/
-│   │   └── session.py
-│   └── modules/
-│       ├── orders/
-│       │   ├── models.py
-│       │   ├── schemas.py
-│       │   ├── repository.py
-│       │   ├── service.py
-│       │   └── routes.py
-│       └── users/
-│           ├── models.py
-│           ├── schemas.py
-│           ├── repository.py
-│           ├── service.py
-│           └── routes.py
-├── alembic/
-├── tests/
-│   ├── unit/
-│   └── integration/
-├── pyproject.toml
-└── README.md
-```
+> **This structure keeps concerns well-defined in a monolithic codebase while encouraging boundaries
+> that translate well to microservices, without introducing that complexity prematurely.**
 
-## 🐍 Python Virtual Environment (venv)
+## Architecture
 
-It’s recommended to use a virtual environment to isolate dependencies.
+The codebase follows a domain-oriented structure combined with the **Service Layer** and **Repository** patterns.
+Each module (e.g., `orders`, `users`) is self-contained and implements a consistent internal layout:
 
-### Create venv
+| Layer          | Responsibility                                                     |
+| -------------- | ------------------------------------------------------------------ |
+| **routes**     | HTTP interface (request/response handling, validation entrypoints) |
+| **service**    | Business logic and orchestration (Service Layer pattern)           |
+| **repository** | Data access abstraction over the database                          |
+| **models**     | Database models (ORM entities)                                     |
+| **schemas**    | API contracts (input/output validation and serialization)          |
+
+**Key characteristics:**
+* Thin controllers: Routes delegate all non-trivial logic to services
+* Explicit business layer: Services centralize rules and workflows
+* Decoupled data access: Repositories isolate database interactions
+* Domain isolation: Each module is self-contained, reducing cross-coupling
+* Testability: Business logic can be tested independently of HTTP and database layers
+
+The design prioritizes clarity, testability, and maintainability,
+while remaining flexible enough to evolve into a distributed architecture if needed.
+
+## Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/)
+
+## Run the Application
 
 ```bash
-python -m venv .venv
+make run
 ```
 
-### Activate
-
-**Linux / macOS**
-
-```bash
-source .venv/bin/activate
-```
-
-**Windows (PowerShell)**
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-### Install dependencies
-
-```bash
-pip install --upgrade pip
-pip install -e '.[dev]'
-```
-
-## 🐘 Running PostgreSQL (Docker)
-
-Start a fresh local PostgreSQL instance:
-
-```bash
-docker stop postgres-dev || true
-docker rm postgres-dev || true
-docker run -d \
-  --name postgres-dev \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=app \
-  -p 5432:5432 \
-  postgres:15
-```
-
-## ⚙️ Environment Variables
-
-Set your database connection:
-
-```bash
-export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/app
-```
-
-## 🗄️ Database Migrations (Alembic)
-
-Create migration:
-
-```bash
-python -m alembic revision --autogenerate -m "init"
-```
-
-Apply migrations:
-
-```bash
-python -m alembic upgrade head
-```
-
-## ▶️ Run the API
-
-```bash
-uvicorn app.main:app --reload
-```
+This will spin up two containers:
+- PostgreSQL
+- Application in development mode with auto-reload and debug
 
 API will be available at:
-
 ```
 http://localhost:8000
 ```
-
-Interactive docs:
-
+Swagger UI at:
 ```
 http://localhost:8000/docs
 ```
 
-## 🧪 Running Tests
-
-### Unit Tests
-
-> Uses SQLite in-memory, so no database setup is required.
+## Running Tests
 
 ```bash
-pytest tests/unit
+# Run unit tests
+make test-unit
+# Run integration tests
+make test-integration
 ```
 
-### Integration Tests
-
-> Fresh PostgreSQL instance with migrations applied is required.
+## Example API Usage
 
 ```bash
-pytest tests/integration
-```
-
-## 🔌 Example API Usage
-
-### Create Order
-
-```bash
+# Create Order
 curl -X POST http://localhost:8000/orders/ \
   -H "Content-Type: application/json" \
   -d '{"item": "laptop"}'
-```
 
-### Get Order
-
-```bash
+# Get Order
 curl http://localhost:8000/orders/1
-```
 
-### List Orders
-
-```bash
+# List Orders
 curl http://localhost:8000/orders/
 ```
 
-## 🧠 Architecture
+## All Make Targets
 
-This project uses a **feature-based modular structure**:
-
-* `modules/orders` contains everything related to orders
-* `repository.py` → database access
-* `service.py` → business logic
-* `routes.py` → API layer
-
-This keeps the codebase:
-
-* easy to navigate
-* easy to extend
-* ready to evolve into microservices if needed
-
-## 📌 Future Improvements
-
-* Order state transitions (finite state machine)
-* Update / delete endpoints
-* Authorization
-* Integration tests with PostgreSQL
-* Docker support for full deployment
+| Command | Description |
+|---------|-------------|
+| `make help` | List all available commands |
+| `make build` | Build the Docker container |
+| `make run` | Run the app (development with auto-reload) |
+| `make stop` | Stop the app |
+| `make clean` | Clean up Docker containers and volumes |
+| `make test-unit` | Run unit tests |
+| `make test-integration` | Run integration tests |
