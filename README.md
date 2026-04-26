@@ -97,5 +97,6 @@ curl http://localhost:8000/orders/
 | `make run` | Run the app (development with auto-reload) |
 | `make stop` | Stop the app |
 | `make clean` | Clean up Docker containers and volumes |
+| `make test` | Run all tests |
 | `make test-unit` | Run unit tests |
 | `make test-integration` | Run integration tests |
