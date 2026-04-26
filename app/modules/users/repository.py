@@ -1,42 +1,38 @@
-from sqlalchemy.orm import Session
-from . import models
 import bcrypt
 import hashlib
+from sqlalchemy.orm import Session
+from . import models
 
 
-def create_user(db: Session, username: str, password: str):
-    # TODO: Add password strength check, should be long (20+ chars) OR complex (with uppercase, lowercase, numbers and symbols)
+class UserRepository:
+    def __init__(self, db: Session):
+        self._db = db
 
-    # Hash the password with bcrypt
-    # bcrypt has a 72-byte limit, so we'll hash long passwords with SHA-256 first
-    if len(password) > 72:
-        password = hashlib.sha256(password.encode()).hexdigest()
+    def create_user(self, username: str, password: str):
+        hashed_password = self._hash_password(password)
+        user = models.User(username=username, hashed_password=hashed_password)
+        self._db.add(user)
+        self._db.commit()
+        self._db.refresh(user)
+        return user
 
-    # Hash with bcrypt
-    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    def get_user_by_username(self, username: str):
+        return self._db.query(models.User).filter(models.User.username == username).first()
 
-    # Create user object
-    user = models.User(username=username, hashed_password=hashed_password.decode('utf-8'))
+    def get_user_by_id(self, user_id: int):
+        return self._db.query(models.User).filter(models.User.id == user_id).first()
 
-    # Add to database
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
+    def _hash_password(self, password: str) -> str:
+        if len(password) > 72:
+            password = hashlib.sha256(password.encode()).hexdigest()
+        return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-
-def get_user_by_username(db: Session, username: str):
-    return db.query(models.User).filter(models.User.username == username).first()
-
-
-def get_user_by_id(db: Session, user_id: int):
-    return db.query(models.User).filter(models.User.id == user_id).first()
+    @staticmethod
+    def verify_password(plain_password: str, hashed_password: str) -> bool:
+        if len(plain_password) > 72:
+            plain_password = hashlib.sha256(plain_password.encode()).hexdigest()
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    # Handle long passwords by hashing them first
-    if len(plain_password) > 72:
-        plain_password = hashlib.sha256(plain_password.encode()).hexdigest()
-
-    # Verify password
-    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    return UserRepository.verify_password(plain_password, hashed_password)

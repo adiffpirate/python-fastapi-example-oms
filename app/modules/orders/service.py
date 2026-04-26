@@ -1,17 +1,38 @@
-from sqlalchemy.orm import Session
-from . import repository, models
+from . import repository
 
 
-def create_order(db: Session, item: str):
-    return repository.create_order(db, item)
+def create_order(repo: repository.OrderRepository, item: str):
+    return repo.create_order(item)
 
 
-def get_order(db: Session, order_id: int):
-    order = repository.get_order(db, order_id)
+def get_order(repo: repository.OrderRepository, order_id: int):
+    order = repo.get_order(order_id)
     if not order:
         raise ValueError("Order not found")
     return order
 
 
-def list_orders(db: Session):
-    return repository.list_orders(db)
+def list_orders(repo: repository.OrderRepository):
+    return repo.list_orders()
+
+
+def update_order(repo: repository.OrderRepository, order_id: int, **kwargs):
+    """Update an order with the provided fields. Raises ValueError if not found."""
+    order = repo.get_order(order_id)
+    if not order:
+        raise ValueError("Order not found")
+    for key, value in kwargs.items():
+        if value is not None:
+            setattr(order, key, value)
+    repo._db.commit()
+    repo._db.refresh(order)
+    return order
+
+
+def delete_order(repo: repository.OrderRepository, order_id: int):
+    """Delete an order. Raises ValueError if not found."""
+    order = repo.get_order(order_id)
+    if not order:
+        raise ValueError("Order not found")
+    repo._db.delete(order)
+    repo._db.commit()

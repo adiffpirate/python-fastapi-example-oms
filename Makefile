@@ -2,20 +2,15 @@
 
 help:
 	@echo "Available commands:"
-	@echo "  build            - Build the docker container"
 	@echo "  run              - Run the application (development with auto-reload, debug mode)"
+	@echo "  stop             - Stop the application"
 	@echo "  test             - Run all tests"
 	@echo "  test-unit        - Run unit tests"
 	@echo "  test-integration - Run integration tests with fresh database"
-	@echo "  stop             - Stop the application"
 	@echo "  clean            - Clean up Docker containers and volumes"
 
-build:
-	docker build -t python-fastapi-example-oms:dev .
-
 run:
-	$(MAKE) build
-	docker compose up -d
+	docker compose up --build -d
 	@echo "Application running at http://localhost:8000"
 	@echo "Swagger UI is available at http://localhost:8000/docs"
 
@@ -28,9 +23,8 @@ test:
 	$(MAKE) test-integration
 
 test-unit:
-	$(MAKE) build
 	@echo "Running unit tests..."
-	docker compose run --rm app python -m pytest tests/unit/ -v
+	docker run --rm --tty -v $(PWD):/app python-fastapi-example-oms:dev python -m pytest tests/unit/ -v
 
 test-integration:
 	$(MAKE) clean
