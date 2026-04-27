@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from . import service, schemas, repository
+from .service import InvalidOrderTransition
 from app.core.auth import get_current_user
 
 router = APIRouter()
@@ -53,6 +54,8 @@ def update_order(
         return service.update_order(repo, order_id, **updates)
     except ValueError:
         raise HTTPException(status_code=404, detail="Order not found")
+    except InvalidOrderTransition as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.delete("/{order_id}", status_code=204)

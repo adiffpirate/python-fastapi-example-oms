@@ -6,8 +6,10 @@ import enum
 class OrderStatus(str, enum.Enum):
     RECEIVED = "received"
     PROCESSING = "processing"
+    FULFILLED = "fulfilled"
     SHIPPED = "shipped"
     DELIVERED = "delivered"
+    CANCELLED = "cancelled"
 
 
 class Order(Base):

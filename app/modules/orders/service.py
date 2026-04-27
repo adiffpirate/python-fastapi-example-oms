@@ -1,4 +1,43 @@
-from . import repository
+from . import repository, models
+
+
+class InvalidOrderTransition(Exception):
+    """Raised when a requested status transition is not allowed."""
+    pass
+
+
+class OrderStateMachine:
+    """Finite state machine for order status transitions."""
+
+    TRANSITIONS = {
+        models.OrderStatus.RECEIVED: [
+            models.OrderStatus.PROCESSING,
+            models.OrderStatus.CANCELLED,
+        ],
+        models.OrderStatus.PROCESSING: [
+            models.OrderStatus.FULFILLED,
+            models.OrderStatus.CANCELLED,
+        ],
+        models.OrderStatus.FULFILLED: [
+            models.OrderStatus.SHIPPED,
+            models.OrderStatus.CANCELLED,
+        ],
+        models.OrderStatus.SHIPPED: [
+            models.OrderStatus.DELIVERED
+        ],
+        models.OrderStatus.DELIVERED: [],
+        models.OrderStatus.CANCELLED: [],
+    }
+
+    @classmethod
+    def validate_transition(cls, current: models.OrderStatus, target: models.OrderStatus) -> None:
+        allowed = cls.TRANSITIONS.get(current)
+        if allowed is None:
+            raise InvalidOrderTransition(f"Unknown status: {current}")
+        if target not in allowed:
+            raise InvalidOrderTransition(
+                f"Cannot transition from {current} to {target}"
+            )
 
 
 def create_order(repo: repository.OrderRepository, item: str):
@@ -21,6 +60,10 @@ def update_order(repo: repository.OrderRepository, order_id: int, **kwargs):
     order = repo.get_order(order_id)
     if not order:
         raise ValueError("Order not found")
+
+    if "status" in kwargs and kwargs["status"] is not None:
+        OrderStateMachine.validate_transition(order.status, kwargs["status"])
+
     for key, value in kwargs.items():
         if value is not None:
             setattr(order, key, value)

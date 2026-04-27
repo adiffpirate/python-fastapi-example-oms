@@ -135,3 +135,53 @@ def test_delete_order_not_found(client):
 def test_orders_without_auth_returns_401(client):
     response = client.get("/orders/")
     assert response.status_code == 401
+
+
+def test_update_order_cancel_from_received(client):
+    token = _login(client)
+    created = client.post("/orders/", json={"item": "cancel_me"}, headers={
+        "Authorization": f"Bearer {token}"
+    }).json()
+    order_id = created["id"]
+    assert created["status"] == "received"
+
+    response = client.put(f"/orders/{order_id}", json={"status": "cancelled"}, headers={
+        "Authorization": f"Bearer {token}"
+    })
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "cancelled"
+
+    get_response = client.get(f"/orders/{order_id}", headers={
+        "Authorization": f"Bearer {token}"
+    })
+    assert get_response.status_code == 200
+    assert get_response.json()["status"] == "cancelled"
+
+
+def test_update_order_invalid_transition(client):
+    token = _login(client)
+    created = client.post("/orders/", json={"item": "terminal"}, headers={
+        "Authorization": f"Bearer {token}"
+    }).json()
+    order_id = created["id"]
+
+    # Advance through valid transitions to DELIVERED
+    for next_status in ["processing", "fulfilled", "shipped", "delivered"]:
+        response = client.put(f"/orders/{order_id}", json={"status": next_status}, headers={
+            "Authorization": f"Bearer {token}"
+        })
+        assert response.status_code == 200
+
+    # DELIVERED -> PROCESSING should fail
+    response = client.put(f"/orders/{order_id}", json={"status": "processing"}, headers={
+        "Authorization": f"Bearer {token}"
+    })
+    assert response.status_code == 400
+    assert "Cannot transition" in response.json()["detail"]
+
+    # Order should still be DELIVERED
+    get_response = client.get(f"/orders/{order_id}", headers={
+        "Authorization": f"Bearer {token}"
+    })
+    assert get_response.json()["status"] == "delivered"

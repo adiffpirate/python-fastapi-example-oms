@@ -1,4 +1,4 @@
-.PHONY: help run stop test test-unit test-integration clean
+.PHONY: help run stop test test-unit test-integration clean migrations
 
 help:
 	@echo "Available commands:"
@@ -8,6 +8,7 @@ help:
 	@echo "  test-unit        - Run unit tests"
 	@echo "  test-integration - Run integration tests with fresh database"
 	@echo "  clean            - Clean up Docker containers and volumes"
+	@echo "  migrations msg   - Generate alembic migration via Docker (e.g. make migrations msg='add cancelled status')"
 
 run:
 	docker compose up --build -d
@@ -33,6 +34,10 @@ test-integration:
 	@echo "Running integration tests..."
 	docker compose run --rm app python -m pytest tests/integration/ -v
 	$(MAKE) clean
+
+migrations:
+	@if [ -z "$(msg)" ]; then echo "Usage: make migrations msg='your message'"; exit 1; fi
+	docker compose run --rm app alembic revision --autogenerate -m "$(msg)"
 
 clean:
 	$(MAKE) stop

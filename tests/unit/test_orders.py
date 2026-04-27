@@ -1,6 +1,8 @@
 from unittest.mock import MagicMock
+import pytest
 
 from app.modules.orders import service, repository, models
+from app.modules.orders.service import OrderStateMachine, InvalidOrderTransition
 
 
 def _make_mock_repo(order=None):
@@ -91,3 +93,74 @@ def test_delete_order_not_found():
         assert False, "Should have raised ValueError"
     except ValueError as e:
         assert str(e) == "Order not found"
+
+
+# ── FSM Unit Tests ──────────────────────────────────────────────────────────
+
+VALID_TRANSITIONS = [
+    (models.OrderStatus.RECEIVED, models.OrderStatus.PROCESSING),
+    (models.OrderStatus.RECEIVED, models.OrderStatus.CANCELLED),
+    (models.OrderStatus.PROCESSING, models.OrderStatus.FULFILLED),
+    (models.OrderStatus.PROCESSING, models.OrderStatus.CANCELLED),
+    (models.OrderStatus.FULFILLED, models.OrderStatus.SHIPPED),
+    (models.OrderStatus.FULFILLED, models.OrderStatus.CANCELLED),
+    (models.OrderStatus.SHIPPED, models.OrderStatus.DELIVERED),
+]
+
+INVALID_TRANSITIONS = [
+    (models.OrderStatus.RECEIVED, models.OrderStatus.FULFILLED),
+    (models.OrderStatus.RECEIVED, models.OrderStatus.SHIPPED),
+    (models.OrderStatus.RECEIVED, models.OrderStatus.DELIVERED),
+    (models.OrderStatus.PROCESSING, models.OrderStatus.SHIPPED),
+    (models.OrderStatus.PROCESSING, models.OrderStatus.DELIVERED),
+    (models.OrderStatus.FULFILLED, models.OrderStatus.DELIVERED),
+    (models.OrderStatus.FULFILLED, models.OrderStatus.RECEIVED),
+    (models.OrderStatus.SHIPPED, models.OrderStatus.PROCESSING),
+    (models.OrderStatus.SHIPPED, models.OrderStatus.CANCELLED),
+    (models.OrderStatus.DELIVERED, models.OrderStatus.PROCESSING),
+    (models.OrderStatus.DELIVERED, models.OrderStatus.DELIVERED),
+    (models.OrderStatus.CANCELLED, models.OrderStatus.PROCESSING),
+    (models.OrderStatus.CANCELLED, models.OrderStatus.CANCELLED),
+]
+
+
+@pytest.mark.parametrize("current, target", VALID_TRANSITIONS)
+def test_fsm_valid_transitions(current, target):
+    OrderStateMachine.validate_transition(current, target)
+
+
+@pytest.mark.parametrize("current, target", INVALID_TRANSITIONS)
+def test_fsm_invalid_transitions(current, target):
+    with pytest.raises(InvalidOrderTransition):
+        OrderStateMachine.validate_transition(current, target)
+
+
+def test_fsm_unknown_current_status():
+    with pytest.raises(InvalidOrderTransition):
+        OrderStateMachine.validate_transition("unknown", models.OrderStatus.PROCESSING)
+
+
+def test_fsm_unknown_target_status():
+    with pytest.raises(InvalidOrderTransition):
+        OrderStateMachine.validate_transition(models.OrderStatus.RECEIVED, "unknown")
+
+
+# ── Service Layer FSM Integration Tests ─────────────────────────────────────
+
+
+def test_update_order_invalid_status_transition():
+    order = _make_order()
+    repo = _make_mock_repo(order=order)
+    with pytest.raises(InvalidOrderTransition):
+        service.update_order(repo, 1, status="delivered")
+    repo._db.commit.assert_not_called()
+    repo._db.refresh.assert_not_called()
+
+
+def test_update_order_valid_status_transition():
+    order = _make_order()
+    repo = _make_mock_repo(order=order)
+    result = service.update_order(repo, 1, status="processing")
+    assert result.status == "processing"
+    repo._db.commit.assert_called_once()
+    repo._db.refresh.assert_called_once_with(order)

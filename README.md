@@ -100,3 +100,4 @@ curl http://localhost:8000/orders/
 | `make test` | Run all tests |
 | `make test-unit` | Run unit tests |
 | `make test-integration` | Run integration tests |
+| `make migrations msg=<msg>` | Generate alembic migrations |
