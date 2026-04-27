@@ -25,7 +25,7 @@ test:
 test-unit:
 	@echo "Running unit tests..."
 	docker build -t python-fastapi-example-oms-app:latest .
-	docker run --rm --tty python-fastapi-example-oms-app:latest python -m pytest tests/unit/ -v
+	docker run --rm --tty -e AUTH_JWT_SECRET_KEY=docker-unit-tests-key python-fastapi-example-oms-app:latest python -m pytest tests/unit/ -v
 
 test-integration:
 	$(MAKE) clean

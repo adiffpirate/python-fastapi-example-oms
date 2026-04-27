@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from . import service, schemas, repository
+from app.core.auth import create_access_token
 
 router = APIRouter()
 
@@ -27,7 +28,8 @@ def register_user(payload: schemas.UserCreate, repo: repository.UserRepository =
 @router.post("/login", response_model=schemas.UserToken)
 def login_user(payload: schemas.UserAuthenticate, repo: repository.UserRepository = Depends(get_users_repository)):
     user = service.authenticate_user(repo, payload.username, payload.password)
+    token = create_access_token(user.username)
     return schemas.UserToken(
-        access_token=f"fake-jwt-token-for-{user.username}",
+        access_token=token,
         token_type="bearer"
     )

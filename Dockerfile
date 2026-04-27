@@ -14,6 +14,9 @@ RUN pip install --upgrade pip && pip install -e '.[dev]'
 # Copy application code
 COPY . .
 
+# Required env vars
+ENV AUTH_JWT_SECRET_KEY=""
+
 # Expose port
 EXPOSE 8000
 
