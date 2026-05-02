@@ -3,7 +3,10 @@ import pytest
 
 from app.modules.payment import service, repository, models as payment_models
 from app.modules.orders import models as order_models
+from app.modules.orders.repository import OrderRepository
+from app.modules.payment import service, repository, models as payment_models
 from app.modules.payment.service import PaymentError, InvoiceNotFoundError
+from unittest.mock import patch
 
 
 def _make_mock_invoice_repo(invoice=None):
@@ -17,7 +20,7 @@ def _make_mock_invoice_repo(invoice=None):
 
 
 def _make_mock_order_repo(order=None):
-    repo = MagicMock(spec=repository.OrderRepository)
+    repo = MagicMock(spec=OrderRepository)
     repo._db = MagicMock()
     repo.get_order.return_value = order
     return repo
@@ -36,7 +39,7 @@ def _make_order(item="widget", status="received"):
     order = MagicMock(spec=order_models.Order)
     order.id = 1
     order.item = item
-    order.status = status
+    order.status = order_models.OrderStatus(status)
     return order
 
 
@@ -51,13 +54,14 @@ def test_generate_invoice_success():
     invoice_repo.get_invoice_by_order_id.return_value = None
     invoice_repo.create_invoice.return_value = invoice
 
-    result = service.generate_invoice(order_repo, invoice_repo, 1)
+    with patch.object(service, '_call_payment_api_create_invoice', return_value='inv-test123'):
+        with patch.object(service.order_service, 'update_order') as mock_update:
+            result = service.generate_invoice(order_repo, invoice_repo, 1)
 
     assert result == invoice
     order_repo.create_order.assert_not_called()
     invoice_repo.create_invoice.assert_called_once_with(1, "inv-test123")
-    order_service_update = service.order_service.update_order
-    order_service_update.assert_called_once()
+    mock_update.assert_called_once()
 
 
 def test_generate_invoice_order_not_found():
