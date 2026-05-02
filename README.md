@@ -1,10 +1,10 @@
 ```
-  ╔══════════════════════════════════════════════════════╗
-  ║                                                      ║
-  ║   Developed with Claude Code                         ║
-  ║   (but using a local model via llama.cpp)            ║
-  ║                                                      ║
-  ╚══════════════════════════════════════════════════════╝
+  ╔═══════════════════════════════════════════════════════════════════╗
+  ║                                                                   ║
+  ║   Developed with Claude Code initially, then moved to Open Code   ║
+  ║   --- but using a local model Qwen3.6-35B-A3B via llama.cpp ---   ║
+  ║                                                                   ║
+  ╚═══════════════════════════════════════════════════════════════════╝
 ```
 
 # Order Management System API
