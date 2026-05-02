@@ -1,0 +1,11 @@
+services:
+  app:
+    image: python-fastapi-example-oms-app:dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      AUTH_JWT_SECRET_KEY: test-secret-key-for-local-dev-only
+    volumes:
+      - .:/app
+    command: python -m pytest tests/unit/ -v

@@ -29,7 +29,7 @@ test:
 
 test-unit:
 	@echo "Running unit tests..."
-	docker run --rm --tty -e AUTH_JWT_SECRET_KEY=docker-unit-tests-key python-fastapi-example-oms-app:dev python -m pytest tests/unit/ -v
+	docker compose -f docker-compose.unittests.yml run --rm app
 
 test-integration:
 	$(MAKE) clean
