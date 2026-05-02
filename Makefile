@@ -1,7 +1,8 @@
-.PHONY: help run stop test test-unit test-integration clean migrations
+.PHONY: help build run stop test test-unit test-integration clean migrations
 
 help:
 	@echo "Available commands:"
+	@echo "  build            - Build the docker images"
 	@echo "  run              - Run the application (development with auto-reload, debug mode)"
 	@echo "  stop             - Stop the application"
 	@echo "  test             - Run all tests"
@@ -10,8 +11,11 @@ help:
 	@echo "  clean            - Clean up Docker containers and volumes"
 	@echo "  migrations msg   - Generate alembic migration via Docker (e.g. make migrations msg='add cancelled status')"
 
+build:
+	docker compose build
+
 run:
-	docker compose up --build -d
+	docker compose up -d
 	@echo "Application running at http://localhost:8000"
 	@echo "Swagger UI is available at http://localhost:8000/docs"
 
@@ -25,8 +29,7 @@ test:
 
 test-unit:
 	@echo "Running unit tests..."
-	docker build -t python-fastapi-example-oms-app:latest .
-	docker run --rm --tty -e AUTH_JWT_SECRET_KEY=docker-unit-tests-key python-fastapi-example-oms-app:latest python -m pytest tests/unit/ -v
+	docker run --rm --tty -e AUTH_JWT_SECRET_KEY=docker-unit-tests-key python-fastapi-example-oms-app:dev python -m pytest tests/unit/ -v
 
 test-integration:
 	$(MAKE) clean

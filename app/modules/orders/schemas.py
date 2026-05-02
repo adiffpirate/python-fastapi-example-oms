@@ -14,7 +14,15 @@ class OrderUpdate(BaseModel):
 
 class OrderRead(BaseModel):
     id: int
+    user_id: int
     item: str
     status: OrderStatus
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedOrders(BaseModel):
+    items: list[OrderRead]
+    total: int
+    page: int
+    page_size: int

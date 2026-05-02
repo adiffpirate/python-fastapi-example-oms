@@ -6,8 +6,8 @@ class OrderRepository:
     def __init__(self, db: Session):
         self._db = db
 
-    def create_order(self, item: str):
-        order = models.Order(item=item)
+    def create_order(self, user_id: int, item: str):
+        order = models.Order(user_id=user_id, item=item)
         self._db.add(order)
         self._db.commit()
         self._db.refresh(order)
@@ -16,8 +16,18 @@ class OrderRepository:
     def get_order(self, order_id: int):
         return self._db.query(models.Order).filter(models.Order.id == order_id).first()
 
-    def list_orders(self):
-        return self._db.query(models.Order).all()
+    def list_orders(self, user_id: int | None = None, status: str | None = None, search: str | None = None, page: int = 1, page_size: int = 20):
+        query = self._db.query(models.Order)
+        if user_id is not None:
+            query = query.filter(models.Order.user_id == user_id)
+        if status is not None:
+            query = query.filter(models.Order.status == status)
+        if search is not None:
+            query = query.filter(models.Order.item.ilike(f"%{search}%"))
+        total = query.count()
+        offset = (page - 1) * page_size
+        items = query.order_by(models.Order.id).offset(offset).limit(page_size).all()
+        return items, total
 
     def update_order(self, order_id: int, **kwargs):
         order = self._db.query(models.Order).filter(models.Order.id == order_id).first()

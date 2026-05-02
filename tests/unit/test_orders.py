@@ -22,8 +22,8 @@ def _make_order(item="widget", status="received"):
 
 def test_create_order():
     repo = _make_mock_repo()
-    result = service.create_order(repo, "laptop")
-    repo.create_order.assert_called_once_with("laptop")
+    result = service.create_order(repo, 1, "laptop")
+    repo.create_order.assert_called_once_with(1, "laptop")
     assert result == repo.create_order.return_value
 
 
@@ -45,11 +45,12 @@ def test_get_order_not_found():
 
 def test_list_orders():
     repo = _make_mock_repo()
-    repo.list_orders.return_value = [_make_order("a"), _make_order("b")]
-    result = service.list_orders(repo)
+    repo.list_orders.return_value = ([_make_order("a"), _make_order("b")], 2)
+    result, total = service.list_orders(repo)
     assert len(result) == 2
     assert result[0].item == "a"
     assert result[1].item == "b"
+    assert total == 2
 
 
 def test_update_order_status():

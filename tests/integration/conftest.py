@@ -9,6 +9,7 @@ from app.main import app
 # IMPORTANT: force model imports
 from app.modules.orders import models  # noqa: F401
 from app.modules.users import models as user_models  # noqa: F401
+from app.modules.payment import models as payment_models  # noqa: F401
 
 # Use the app database when running inside Docker (via docker-compose)
 # Use test_db on localhost when running locally

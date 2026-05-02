@@ -40,8 +40,8 @@ class OrderStateMachine:
             )
 
 
-def create_order(repo: repository.OrderRepository, item: str):
-    return repo.create_order(item)
+def create_order(repo: repository.OrderRepository, user_id: int, item: str):
+    return repo.create_order(user_id, item)
 
 
 def get_order(repo: repository.OrderRepository, order_id: int):
@@ -51,8 +51,9 @@ def get_order(repo: repository.OrderRepository, order_id: int):
     return order
 
 
-def list_orders(repo: repository.OrderRepository):
-    return repo.list_orders()
+def list_orders(repo: repository.OrderRepository, user_id: int | None = None, status: str | None = None, search: str | None = None, page: int = 1, page_size: int = 20):
+    items, total = repo.list_orders(user_id=user_id, status=status, search=search, page=page, page_size=page_size)
+    return items, total
 
 
 def update_order(repo: repository.OrderRepository, order_id: int, **kwargs):
@@ -79,3 +80,18 @@ def delete_order(repo: repository.OrderRepository, order_id: int):
         raise ValueError("Order not found")
     repo._db.delete(order)
     repo._db.commit()
+
+
+def cancel_order(repo: repository.OrderRepository, order_id: int):
+    """Cancel an order. Raises ValueError if not found or order is already terminal."""
+    order = repo.get_order(order_id)
+    if not order:
+        raise ValueError("Order not found")
+
+    if order.status == models.OrderStatus.CANCELLED:
+        raise ValueError("Order is already cancelled")
+    if order.status == models.OrderStatus.DELIVERED:
+        raise ValueError("Cannot cancel a delivered order")
+
+    repo.update_order(order_id, status=models.OrderStatus.CANCELLED)
+    return order
