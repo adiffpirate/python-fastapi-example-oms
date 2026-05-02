@@ -49,7 +49,7 @@ def test_list_orders(client):
         "Authorization": f"Bearer {token}"
     })
     assert response.status_code == 200
-    assert len(response.json()) == 2
+    assert len(response.json()["items"]) == 2
 
 
 def test_update_order_status(client):

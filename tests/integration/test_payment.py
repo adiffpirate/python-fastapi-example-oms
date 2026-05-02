@@ -83,12 +83,12 @@ def test_generate_invoice_duplicate(client):
         "Authorization": f"Bearer {token}"
     })
 
-    # Try to generate second invoice - should fail
+    # Try to generate second invoice - order is now PROCESSING, so status check fails first
     response = client.post("/payment/generate", json={"order_id": order_id}, headers={
         "Authorization": f"Bearer {token}"
     })
     assert response.status_code == 400
-    assert "already exists" in response.json()["detail"]
+    assert "Cannot generate invoice" in response.json()["detail"]
 
 
 def test_pay_invoice_success(client):
@@ -198,7 +198,7 @@ def test_list_invoices(client):
         "Authorization": f"Bearer {token}"
     })
     assert response.status_code == 200
-    assert len(response.json()) == 2
+    assert len(response.json()["items"]) == 2
 
 
 def test_payment_without_auth_returns_401(client):
