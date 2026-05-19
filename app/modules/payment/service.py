@@ -1,4 +1,5 @@
 import uuid
+from sqlalchemy.orm import Session
 from . import repository, models as payment_models
 from app.modules.orders import service as order_service
 from app.modules.orders import repository as order_repo
@@ -16,7 +17,7 @@ class InvoiceNotFoundError(Exception):
     pass
 
 
-def generate_invoice(order_repo: order_repo.OrderRepository, invoice_repo: repository.InvoiceRepository, order_id: int):
+def generate_invoice(db: Session, order_repo: order_repo.OrderRepository, invoice_repo: repository.InvoiceRepository, order_id: int):
     """
     Generate an invoice for an order.
     - Validates the order exists and is in RECEIVED status.
@@ -42,10 +43,13 @@ def generate_invoice(order_repo: order_repo.OrderRepository, invoice_repo: repos
     external_invoice_id = _call_payment_api_create_invoice(order_id)
 
     # Create invoice record
-    invoice = invoice_repo.create_invoice(order_id, external_invoice_id)
-
-    # Transition order to processing
-    order_service.update_order(order_repo, order_id, status=order_models.OrderStatus.PROCESSING)
+    try:
+        invoice = invoice_repo.create_invoice(order_id, external_invoice_id)
+        order_service.update_order(db, order_repo, order_id, status=order_models.OrderStatus.PROCESSING)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
     return invoice
 
@@ -59,7 +63,7 @@ def _call_payment_api_create_invoice(order_id: int) -> str:
     return external_id
 
 
-def mark_invoice_paid(invoice_repo: repository.InvoiceRepository, order_repo: order_repo.OrderRepository, invoice_id: int):
+def mark_invoice_paid(db: Session, invoice_repo: repository.InvoiceRepository, order_repo: order_repo.OrderRepository, invoice_id: int):
     """
     Handle invoice payment completion by invoice ID.
     - Finds the invoice by invoice_id.
@@ -80,7 +84,7 @@ def mark_invoice_paid(invoice_repo: repository.InvoiceRepository, order_repo: or
     return invoice
 
 
-def mark_invoice_paid_by_order_id(invoice_repo: repository.InvoiceRepository, order_repo: order_repo.OrderRepository, order_id: int):
+def mark_invoice_paid_by_order_id(db: Session, invoice_repo: repository.InvoiceRepository, order_repo: order_repo.OrderRepository, order_id: int):
     """
     Handle invoice payment completion via order_id.
     - Finds the invoice by order_id.

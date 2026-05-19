@@ -1,3 +1,4 @@
+from sqlalchemy.orm import Session
 from . import repository, models
 from .exceptions import OrderNotFoundError, OrderOwnershipError
 
@@ -57,7 +58,7 @@ def list_orders(repo: repository.OrderRepository, user_id: int | None = None, st
     return items, total
 
 
-def update_order(repo: repository.OrderRepository, order_id: int, **kwargs):
+def update_order(db: Session, repo: repository.OrderRepository, order_id: int, **kwargs):
     """Update an order with the provided fields. Raises OrderNotFoundError if not found."""
     order = repo.get_order(order_id)
     if not order:
@@ -69,21 +70,29 @@ def update_order(repo: repository.OrderRepository, order_id: int, **kwargs):
     for key, value in kwargs.items():
         if value is not None:
             setattr(order, key, value)
-    repo._db.commit()
-    repo._db.refresh(order)
+    try:
+        db.commit()
+        db.refresh(order)
+    except Exception:
+        db.rollback()
+        raise
     return order
 
 
-def delete_order(repo: repository.OrderRepository, order_id: int):
+def delete_order(db: Session, repo: repository.OrderRepository, order_id: int):
     """Delete an order. Raises OrderNotFoundError if not found."""
     order = repo.get_order(order_id)
     if not order:
         raise OrderNotFoundError()
-    repo._db.delete(order)
-    repo._db.commit()
+    try:
+        repo.delete_order(order_id)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
 
-def cancel_order(repo: repository.OrderRepository, order_id: int):
+def cancel_order(db: Session, repo: repository.OrderRepository, order_id: int):
     """Cancel an order. Raises OrderNotFoundError if not found or OrderOwnershipError if already terminal."""
     order = repo.get_order(order_id)
     if not order:
@@ -94,7 +103,13 @@ def cancel_order(repo: repository.OrderRepository, order_id: int):
     if order.status == models.OrderStatus.DELIVERED:
         raise OrderOwnershipError("Cannot cancel a delivered order")
 
-    repo.update_order(order_id, status=models.OrderStatus.CANCELLED)
+    order.status = models.OrderStatus.CANCELLED
+    try:
+        db.commit()
+        db.refresh(order)
+    except Exception:
+        db.rollback()
+        raise
     return order
 
 
@@ -106,13 +121,13 @@ def require_order_ownership(repo: repository.OrderRepository, order_id: int, use
     return order
 
 
-def cancel_order_with_invoice(order_repo: repository.OrderRepository, payment_repo, order_id: int):
+def cancel_order_with_invoice(db: Session, order_repo: repository.OrderRepository, payment_repo, order_id: int):
     """Cancel an order and its associated invoice. Handles cross-module coupling."""
     from . import service as order_svc
     from app.modules.payment import service as payment_svc
     from app.modules.payment.service import PaymentError
 
-    order = order_svc.cancel_order(order_repo, order_id)
+    order = cancel_order(db, order_repo, order_id)
     try:
         payment_svc.cancel_invoice_by_order_id(payment_repo, order_id)
     except PaymentError as e:

@@ -1,12 +1,10 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import pytest
 
 from app.modules.payment import service, repository, models as payment_models
 from app.modules.orders import models as order_models
 from app.modules.orders.repository import OrderRepository
-from app.modules.payment import service, repository, models as payment_models
 from app.modules.payment.service import PaymentError, InvoiceNotFoundError
-from unittest.mock import patch
 
 
 def _make_mock_invoice_repo(invoice=None):
@@ -24,6 +22,11 @@ def _make_mock_order_repo(order=None):
     repo._db = MagicMock()
     repo.get_order.return_value = order
     return repo
+
+
+def _make_db():
+    db = MagicMock()
+    return db
 
 
 def _make_invoice(order_id=1, status="pending"):
@@ -49,6 +52,7 @@ def _make_order(item="widget", status="received"):
 def test_generate_invoice_success():
     order = _make_order(status="received")
     invoice = _make_invoice()
+    db = _make_db()
     order_repo = _make_mock_order_repo(order)
     invoice_repo = _make_mock_invoice_repo(invoice)
     invoice_repo.get_invoice_by_order_id.return_value = None
@@ -56,7 +60,7 @@ def test_generate_invoice_success():
 
     with patch.object(service, '_call_payment_api_create_invoice', return_value='inv-test123'):
         with patch.object(service.order_service, 'update_order') as mock_update:
-            result = service.generate_invoice(order_repo, invoice_repo, 1)
+            result = service.generate_invoice(db, order_repo, invoice_repo, 1)
 
     assert result == invoice
     order_repo.create_order.assert_not_called()
@@ -67,9 +71,10 @@ def test_generate_invoice_success():
 def test_generate_invoice_order_not_found():
     order_repo = _make_mock_order_repo(None)
     invoice_repo = _make_mock_invoice_repo()
+    db = _make_db()
 
     try:
-        service.generate_invoice(order_repo, invoice_repo, 999)
+        service.generate_invoice(db, order_repo, invoice_repo, 999)
         assert False, "Should have raised ValueError"
     except ValueError as e:
         assert str(e) == "Order not found"
@@ -79,9 +84,10 @@ def test_generate_invoice_order_not_received():
     order = _make_order(status="fulfilled")
     order_repo = _make_mock_order_repo(order)
     invoice_repo = _make_mock_invoice_repo()
+    db = _make_db()
 
     try:
-        service.generate_invoice(order_repo, invoice_repo, 1)
+        service.generate_invoice(db, order_repo, invoice_repo, 1)
         assert False, "Should have raised PaymentError"
     except PaymentError as e:
         assert "Cannot generate invoice" in str(e)
@@ -93,9 +99,10 @@ def test_generate_invoice_already_exists():
     order_repo = _make_mock_order_repo(order)
     invoice_repo = _make_mock_invoice_repo(invoice)
     invoice_repo.get_invoice_by_order_id.return_value = invoice
+    db = _make_db()
 
     try:
-        service.generate_invoice(order_repo, invoice_repo, 1)
+        service.generate_invoice(db, order_repo, invoice_repo, 1)
         assert False, "Should have raised PaymentError"
     except PaymentError as e:
         assert "already exists" in str(e)
@@ -107,24 +114,26 @@ def test_generate_invoice_already_exists():
 def test_mark_invoice_paid_success():
     order = _make_order()
     invoice = _make_invoice(status="pending")
+    db = _make_db()
     order_repo = _make_mock_order_repo(order)
     invoice_repo = _make_mock_invoice_repo(invoice)
     invoice_repo.get_invoice.return_value = invoice
     invoice_repo.mark_invoice_paid_and_update_order.return_value = (invoice, order)
 
-    result = service.mark_invoice_paid(invoice_repo, order_repo, 1)
+    result = service.mark_invoice_paid(db, invoice_repo, order_repo, 1)
 
     assert result == invoice
     invoice_repo.mark_invoice_paid_and_update_order.assert_called_once_with(1, 1, order_models.OrderStatus.FULFILLED)
 
 
 def test_mark_invoice_paid_not_found():
+    db = _make_db()
     order_repo = _make_mock_order_repo()
     invoice_repo = _make_mock_invoice_repo(None)
     invoice_repo.get_invoice.return_value = None
 
     try:
-        service.mark_invoice_paid(invoice_repo, order_repo, 999)
+        service.mark_invoice_paid(db, invoice_repo, order_repo, 999)
         assert False, "Should have raised InvoiceNotFoundError"
     except InvoiceNotFoundError as e:
         assert "not found" in str(e)
@@ -132,12 +141,13 @@ def test_mark_invoice_paid_not_found():
 
 def test_mark_invoice_paid_already_paid():
     invoice = _make_invoice(status="paid")
+    db = _make_db()
     order_repo = _make_mock_order_repo()
     invoice_repo = _make_mock_invoice_repo(invoice)
     invoice_repo.get_invoice.return_value = invoice
 
     try:
-        service.mark_invoice_paid(invoice_repo, order_repo, 1)
+        service.mark_invoice_paid(db, invoice_repo, order_repo, 1)
         assert False, "Should have raised PaymentError"
     except PaymentError as e:
         assert "already marked as paid" in str(e)
@@ -149,24 +159,26 @@ def test_mark_invoice_paid_already_paid():
 def test_mark_invoice_paid_by_order_id_success():
     order = _make_order()
     invoice = _make_invoice(status="pending")
+    db = _make_db()
     order_repo = _make_mock_order_repo(order)
     invoice_repo = _make_mock_invoice_repo(invoice)
     invoice_repo.get_invoice_by_order_id.return_value = invoice
     invoice_repo.mark_invoice_paid_and_update_order.return_value = (invoice, order)
 
-    result = service.mark_invoice_paid_by_order_id(invoice_repo, order_repo, 1)
+    result = service.mark_invoice_paid_by_order_id(db, invoice_repo, order_repo, 1)
 
     assert result == invoice
     invoice_repo.mark_invoice_paid_and_update_order.assert_called_once_with(1, 1, order_models.OrderStatus.FULFILLED)
 
 
 def test_mark_invoice_paid_invoice_not_found():
+    db = _make_db()
     order_repo = _make_mock_order_repo()
     invoice_repo = _make_mock_invoice_repo(None)
     invoice_repo.get_invoice_by_order_id.return_value = None
 
     try:
-        service.mark_invoice_paid_by_order_id(invoice_repo, order_repo, 999)
+        service.mark_invoice_paid_by_order_id(db, invoice_repo, order_repo, 999)
         assert False, "Should have raised InvoiceNotFoundError"
     except InvoiceNotFoundError as e:
         assert "No invoice found" in str(e)
@@ -174,12 +186,13 @@ def test_mark_invoice_paid_invoice_not_found():
 
 def test_mark_invoice_paid_already_paid():
     invoice = _make_invoice(status="paid")
+    db = _make_db()
     order_repo = _make_mock_order_repo()
     invoice_repo = _make_mock_invoice_repo(invoice)
     invoice_repo.get_invoice_by_order_id.return_value = invoice
 
     try:
-        service.mark_invoice_paid_by_order_id(invoice_repo, order_repo, 1)
+        service.mark_invoice_paid_by_order_id(db, invoice_repo, order_repo, 1)
         assert False, "Should have raised PaymentError"
     except PaymentError as e:
         assert "already marked as paid" in str(e)

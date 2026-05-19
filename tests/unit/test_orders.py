@@ -12,6 +12,11 @@ def _make_mock_repo(order=None):
     return repo
 
 
+def _make_db():
+    db = MagicMock()
+    return db
+
+
 def _make_order(item="widget", status="received"):
     order = MagicMock(spec=models.Order)
     order.id = 1
@@ -56,24 +61,27 @@ def test_list_orders():
 def test_update_order_status():
     order = _make_order()
     repo = _make_mock_repo(order=order)
-    result = service.update_order(repo, 1, status="processing")
+    db = _make_db()
+    result = service.update_order(db, repo, 1, status="processing")
     assert result.status == "processing"
-    repo._db.commit.assert_called_once()
-    repo._db.refresh.assert_called_once_with(order)
+    db.commit.assert_called_once()
+    db.refresh.assert_called_once_with(order)
 
 
 def test_update_order_item():
     order = _make_order()
     repo = _make_mock_repo(order=order)
-    result = service.update_order(repo, 1, item="new_item")
+    db = _make_db()
+    result = service.update_order(db, repo, 1, item="new_item")
     assert result.item == "new_item"
     assert result.status == "received"
 
 
 def test_update_order_not_found():
     repo = _make_mock_repo(order=None)
+    db = _make_db()
     try:
-        service.update_order(repo, 999, status="shipped")
+        service.update_order(db, repo, 999, status="shipped")
         assert False, "Should have raised ValueError"
     except ValueError as e:
         assert str(e) == "Order not found"
@@ -82,15 +90,17 @@ def test_update_order_not_found():
 def test_delete_order():
     order = _make_order()
     repo = _make_mock_repo(order=order)
-    service.delete_order(repo, 1)
-    repo._db.delete.assert_called_once_with(order)
-    repo._db.commit.assert_called_once()
+    db = _make_db()
+    service.delete_order(db, repo, 1)
+    repo.delete_order.assert_called_once_with(1)
+    db.commit.assert_called_once()
 
 
 def test_delete_order_not_found():
     repo = _make_mock_repo(order=None)
+    db = _make_db()
     try:
-        service.delete_order(repo, 999)
+        service.delete_order(db, repo, 999)
         assert False, "Should have raised ValueError"
     except ValueError as e:
         assert str(e) == "Order not found"
@@ -152,16 +162,18 @@ def test_fsm_unknown_target_status():
 def test_update_order_invalid_status_transition():
     order = _make_order()
     repo = _make_mock_repo(order=order)
+    db = _make_db()
     with pytest.raises(InvalidOrderTransition):
-        service.update_order(repo, 1, status="delivered")
-    repo._db.commit.assert_not_called()
-    repo._db.refresh.assert_not_called()
+        service.update_order(db, repo, 1, status="delivered")
+    db.commit.assert_not_called()
+    db.refresh.assert_not_called()
 
 
 def test_update_order_valid_status_transition():
     order = _make_order()
     repo = _make_mock_repo(order=order)
-    result = service.update_order(repo, 1, status="processing")
+    db = _make_db()
+    result = service.update_order(db, repo, 1, status="processing")
     assert result.status == "processing"
-    repo._db.commit.assert_called_once()
-    repo._db.refresh.assert_called_once_with(order)
+    db.commit.assert_called_once()
+    db.refresh.assert_called_once_with(order)

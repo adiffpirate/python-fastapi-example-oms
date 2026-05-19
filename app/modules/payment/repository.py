@@ -45,8 +45,6 @@ class InvoiceRepository:
         for field, value in kwargs.items():
             if value is not None:
                 setattr(invoice, field, value)
-        self._db.commit()
-        self._db.refresh(invoice)
         return invoice
 
     def update_invoice_by_order_id(self, order_id: int, **kwargs):
@@ -56,8 +54,6 @@ class InvoiceRepository:
         for field, value in kwargs.items():
             if value is not None:
                 setattr(invoice, field, value)
-        self._db.commit()
-        self._db.refresh(invoice)
         return invoice
 
     def mark_invoice_paid_and_update_order(self, invoice_id: int, order_id: int, order_status):

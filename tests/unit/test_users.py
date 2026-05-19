@@ -20,7 +20,10 @@ def _make_user(username="testuser", hashed_password="$2b$12$tBh4SEwIRe4MpCyn7xC8
 def test_create_user():
     repo = _make_mock_repo(user=None)
     result = service.create_user(repo, "newuser", "password123")
-    repo.create_user.assert_called_once_with("newuser", "password123")
+    repo.create_user.assert_called_once()
+    args = repo.create_user.call_args
+    assert args[0][0] == "newuser"
+    assert args[0][1] != "password123"  # password should be hashed
     assert result == repo.create_user.return_value
 
 
@@ -35,16 +38,15 @@ def test_create_duplicate_user():
 def test_authenticate_user_success():
     user = _make_user(username="authuser")
     repo = _make_mock_repo(user=user)
-    repo.verify_password.return_value = True
+    repo.verify_password = repository.verify_password
     result = service.authenticate_user(repo, "authuser", "password123")
     assert result.username == "authuser"
-    repo.verify_password.assert_called_once_with("password123", user.hashed_password)
 
 
 def test_authenticate_user_wrong_password():
     user = _make_user(username="authuser")
     repo = _make_mock_repo(user=user)
-    repo.verify_password.return_value = False
+    repo.verify_password = repository.verify_password
     with pytest.raises(Exception) as exc_info:
         service.authenticate_user(repo, "authuser", "wrongpassword")
     assert "Incorrect username or password" in str(exc_info.value)
@@ -65,3 +67,9 @@ def test_verify_password_success():
 def test_verify_password_failure():
     hashed = "$2b$12$tBh4SEwIRe4MpCyn7xC8WueCvogxSlBL/fmZFrXtyUwhg0gF2FYzO"
     assert repository.verify_password("wrongpassword", hashed) is False
+
+
+def test_hash_password_returns_hashed():
+    hashed = repository.hash_password("password123")
+    assert hashed != "password123"
+    assert hashed.startswith("$2b$")

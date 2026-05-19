@@ -36,8 +36,6 @@ class OrderRepository:
         for field, value in kwargs.items():
             if value is not None:
                 setattr(order, field, value)
-        self._db.commit()
-        self._db.refresh(order)
         return order
 
     def delete_order(self, order_id: int):
@@ -45,5 +43,10 @@ class OrderRepository:
         if not order:
             raise ValueError("Order not found")
         self._db.delete(order)
-        self._db.commit()
         return True
+
+    def save(self, order):
+        self._db.add(order)
+        self._db.commit()
+        self._db.refresh(order)
+        return order
