@@ -1,4 +1,5 @@
 from . import repository, models
+from .exceptions import OrderNotFoundError, OrderOwnershipError
 
 
 class InvalidOrderTransition(Exception):
@@ -47,7 +48,7 @@ def create_order(repo: repository.OrderRepository, user_id: int, item: str):
 def get_order(repo: repository.OrderRepository, order_id: int):
     order = repo.get_order(order_id)
     if not order:
-        raise ValueError("Order not found")
+        raise OrderNotFoundError()
     return order
 
 
@@ -57,10 +58,10 @@ def list_orders(repo: repository.OrderRepository, user_id: int | None = None, st
 
 
 def update_order(repo: repository.OrderRepository, order_id: int, **kwargs):
-    """Update an order with the provided fields. Raises ValueError if not found."""
+    """Update an order with the provided fields. Raises OrderNotFoundError if not found."""
     order = repo.get_order(order_id)
     if not order:
-        raise ValueError("Order not found")
+        raise OrderNotFoundError()
 
     if "status" in kwargs and kwargs["status"] is not None:
         OrderStateMachine.validate_transition(order.status, kwargs["status"])
@@ -74,24 +75,32 @@ def update_order(repo: repository.OrderRepository, order_id: int, **kwargs):
 
 
 def delete_order(repo: repository.OrderRepository, order_id: int):
-    """Delete an order. Raises ValueError if not found."""
+    """Delete an order. Raises OrderNotFoundError if not found."""
     order = repo.get_order(order_id)
     if not order:
-        raise ValueError("Order not found")
+        raise OrderNotFoundError()
     repo._db.delete(order)
     repo._db.commit()
 
 
 def cancel_order(repo: repository.OrderRepository, order_id: int):
-    """Cancel an order. Raises ValueError if not found or order is already terminal."""
+    """Cancel an order. Raises OrderNotFoundError if not found or OrderOwnershipError if already terminal."""
     order = repo.get_order(order_id)
     if not order:
-        raise ValueError("Order not found")
+        raise OrderNotFoundError()
 
     if order.status == models.OrderStatus.CANCELLED:
-        raise ValueError("Order is already cancelled")
+        raise OrderOwnershipError("Order is already cancelled")
     if order.status == models.OrderStatus.DELIVERED:
-        raise ValueError("Cannot cancel a delivered order")
+        raise OrderOwnershipError("Cannot cancel a delivered order")
 
     repo.update_order(order_id, status=models.OrderStatus.CANCELLED)
+    return order
+
+
+def require_order_ownership(repo: repository.OrderRepository, order_id: int, user_id: int):
+    """Fetch an order and verify the user owns it. Raises OrderOwnershipError if not."""
+    order = get_order(repo, order_id)
+    if order.user_id != user_id:
+        raise OrderOwnershipError()
     return order
