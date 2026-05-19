@@ -1,34 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 
-from app.db.session import get_db
-from . import service, schemas, repository
+from . import service, schemas
 from .exceptions import OrderNotFoundError, OrderOwnershipError
 from .service import InvalidOrderTransition
 from app.core.auth import get_current_user
-from app.modules.users import repository as user_repo
-from app.modules.payment import repository as payment_repo
+from app.core import dependencies as deps
 
 router = APIRouter()
-
-
-def get_orders_repository(db: Session = Depends(get_db)):
-    return repository.OrderRepository(db)
-
-
-def get_user_repository(db: Session = Depends(get_db)):
-    return user_repo.UserRepository(db)
-
-
-def get_payment_repository(db: Session = Depends(get_db)):
-    return payment_repo.InvoiceRepository(db)
 
 
 @router.post("/", response_model=schemas.OrderRead)
 def create_order(
     payload: schemas.OrderCreate,
-    repo: repository.OrderRepository = Depends(get_orders_repository),
-    user_repo: user_repo.UserRepository = Depends(get_user_repository),
+    repo: deps.OrderRepository = Depends(deps.get_orders_repository),
+    user_repo: deps.UserRepository = Depends(deps.get_users_repository),
     username: str = Depends(get_current_user),
 ):
     user = user_repo.get_user_by_username(username)
@@ -40,8 +25,8 @@ def create_order(
 @router.get("/{order_id}", response_model=schemas.OrderRead)
 def get_order(
     order_id: int,
-    repo: repository.OrderRepository = Depends(get_orders_repository),
-    user_repo: user_repo.UserRepository = Depends(get_user_repository),
+    repo: deps.OrderRepository = Depends(deps.get_orders_repository),
+    user_repo: deps.UserRepository = Depends(deps.get_users_repository),
     username: str = Depends(get_current_user),
 ):
     user = user_repo.get_user_by_username(username)
@@ -62,8 +47,8 @@ def list_orders(
     page_size: int = 20,
     status: str | None = None,
     search: str | None = None,
-    repo: repository.OrderRepository = Depends(get_orders_repository),
-    user_repo: user_repo.UserRepository = Depends(get_user_repository),
+    repo: deps.OrderRepository = Depends(deps.get_orders_repository),
+    user_repo: deps.UserRepository = Depends(deps.get_users_repository),
     username: str = Depends(get_current_user),
 ):
     user = user_repo.get_user_by_username(username)
@@ -77,8 +62,8 @@ def list_orders(
 def update_order(
     order_id: int,
     payload: schemas.OrderUpdate,
-    repo: repository.OrderRepository = Depends(get_orders_repository),
-    user_repo: user_repo.UserRepository = Depends(get_user_repository),
+    repo: deps.OrderRepository = Depends(deps.get_orders_repository),
+    user_repo: deps.UserRepository = Depends(deps.get_users_repository),
     username: str = Depends(get_current_user),
 ):
     user = user_repo.get_user_by_username(username)
@@ -100,9 +85,9 @@ def update_order(
 @router.post("/{order_id}/cancel", response_model=schemas.OrderRead)
 def cancel_order(
     order_id: int,
-    repo: repository.OrderRepository = Depends(get_orders_repository),
-    user_repo: user_repo.UserRepository = Depends(get_user_repository),
-    payment_repo: payment_repo.InvoiceRepository = Depends(get_payment_repository),
+    repo: deps.OrderRepository = Depends(deps.get_orders_repository),
+    user_repo: deps.UserRepository = Depends(deps.get_users_repository),
+    payment_repo: deps.InvoiceRepository = Depends(deps.get_payment_repository),
     username: str = Depends(get_current_user),
 ):
     user = user_repo.get_user_by_username(username)
@@ -120,8 +105,8 @@ def cancel_order(
 @router.delete("/{order_id}", status_code=204)
 def delete_order(
     order_id: int,
-    repo: repository.OrderRepository = Depends(get_orders_repository),
-    user_repo: user_repo.UserRepository = Depends(get_user_repository),
+    repo: deps.OrderRepository = Depends(deps.get_orders_repository),
+    user_repo: deps.UserRepository = Depends(deps.get_users_repository),
     username: str = Depends(get_current_user),
 ):
     user = user_repo.get_user_by_username(username)

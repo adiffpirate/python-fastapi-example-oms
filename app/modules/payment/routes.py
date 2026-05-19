@@ -1,28 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 
-from app.db.session import get_db
+from . import service, schemas
 from app.core.auth import get_current_user
-from . import service, schemas, repository
-from app.modules.orders import repository as order_repo
+from app.core import dependencies as deps
 from .service import PaymentError, InvoiceNotFoundError
 
 router = APIRouter()
 
 
-def get_invoice_repository(db: Session = Depends(get_db)):
-    return repository.InvoiceRepository(db)
-
-
-def get_order_repository(db: Session = Depends(get_db)):
-    return order_repo.OrderRepository(db)
-
-
 @router.post("/generate", response_model=schemas.InvoiceRead)
 def generate_invoice(
     payload: schemas.InvoiceCreate,
-    invoice_repo: repository.InvoiceRepository = Depends(get_invoice_repository),
-    order_repo: order_repo.OrderRepository = Depends(get_order_repository),
+    invoice_repo: deps.InvoiceRepository = Depends(deps.get_payment_repository),
+    order_repo: deps.OrderRepository = Depends(deps.get_orders_repository),
     _user: str = Depends(get_current_user),
 ):
     try:
@@ -36,8 +26,8 @@ def generate_invoice(
 @router.post("/pay/{order_id}", response_model=schemas.InvoiceRead)
 def pay_invoice(
     order_id: int,
-    invoice_repo: repository.InvoiceRepository = Depends(get_invoice_repository),
-    order_repo: order_repo.OrderRepository = Depends(get_order_repository),
+    invoice_repo: deps.InvoiceRepository = Depends(deps.get_payment_repository),
+    order_repo: deps.OrderRepository = Depends(deps.get_orders_repository),
     _user: str = Depends(get_current_user),
 ):
     try:
@@ -51,7 +41,7 @@ def pay_invoice(
 @router.get("/invoice/{invoice_id}", response_model=schemas.InvoiceRead)
 def get_invoice(
     invoice_id: int,
-    invoice_repo: repository.InvoiceRepository = Depends(get_invoice_repository),
+    invoice_repo: deps.InvoiceRepository = Depends(deps.get_payment_repository),
     _user: str = Depends(get_current_user),
 ):
     try:
@@ -63,7 +53,7 @@ def get_invoice(
 @router.get("/invoice/order/{order_id}", response_model=schemas.InvoiceRead)
 def get_invoice_by_order(
     order_id: int,
-    invoice_repo: repository.InvoiceRepository = Depends(get_invoice_repository),
+    invoice_repo: deps.InvoiceRepository = Depends(deps.get_payment_repository),
     _user: str = Depends(get_current_user),
 ):
     try:
@@ -78,7 +68,7 @@ def list_invoices(
     page_size: int = 20,
     status: str | None = None,
     search: str | None = None,
-    invoice_repo: repository.InvoiceRepository = Depends(get_invoice_repository),
+    invoice_repo: deps.InvoiceRepository = Depends(deps.get_payment_repository),
     _user: str = Depends(get_current_user),
 ):
     items, total = service.list_invoices(invoice_repo, status=status, search=search, page=page, page_size=page_size)

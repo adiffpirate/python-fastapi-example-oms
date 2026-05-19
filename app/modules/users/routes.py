@@ -1,20 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 
-from app.db.session import get_db
-from . import service, schemas, repository
+from . import service, schemas
 from .exceptions import DuplicateUserError, AuthenticationError
 from app.core.auth import create_access_token
+from app.core import dependencies as deps
 
 router = APIRouter()
 
 
-def get_users_repository(db: Session = Depends(get_db)):
-    return repository.UserRepository(db)
-
-
 @router.post("/register", response_model=schemas.UserRead)
-def register_user(payload: schemas.UserCreate, repo: repository.UserRepository = Depends(get_users_repository)):
+def register_user(payload: schemas.UserCreate, repo: deps.UserRepository = Depends(deps.get_users_repository)):
     try:
         return service.create_user(repo, payload.username, payload.password)
     except DuplicateUserError as e:
@@ -27,7 +22,7 @@ def register_user(payload: schemas.UserCreate, repo: repository.UserRepository =
 
 
 @router.post("/login", response_model=schemas.UserToken)
-def login_user(payload: schemas.UserAuthenticate, repo: repository.UserRepository = Depends(get_users_repository)):
+def login_user(payload: schemas.UserAuthenticate, repo: deps.UserRepository = Depends(deps.get_users_repository)):
     try:
         user = service.authenticate_user(repo, payload.username, payload.password)
     except AuthenticationError as e:
