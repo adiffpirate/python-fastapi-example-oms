@@ -3,7 +3,7 @@ from . import repository, models as payment_models
 from app.modules.orders import service as order_service
 from app.modules.orders import repository as order_repo
 from app.modules.orders import models as order_models
-from fastapi import HTTPException, status
+from app.modules.orders.exceptions import OrderNotFoundError
 
 
 class PaymentError(Exception):
@@ -25,7 +25,7 @@ def generate_invoice(order_repo: order_repo.OrderRepository, invoice_repo: repos
     """
     order = order_repo.get_order(order_id)
     if not order:
-        raise ValueError("Order not found")
+        raise OrderNotFoundError()
 
     if order.status != order_models.OrderStatus.RECEIVED:
         raise PaymentError(
