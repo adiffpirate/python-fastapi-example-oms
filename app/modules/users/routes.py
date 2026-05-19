@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from . import service, schemas, repository
+from .exceptions import DuplicateUserError, AuthenticationError
 from app.core.auth import create_access_token
 
 router = APIRouter()
@@ -16,8 +17,8 @@ def get_users_repository(db: Session = Depends(get_db)):
 def register_user(payload: schemas.UserCreate, repo: repository.UserRepository = Depends(get_users_repository)):
     try:
         return service.create_user(repo, payload.username, payload.password)
-    except HTTPException:
-        raise
+    except DuplicateUserError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -27,7 +28,14 @@ def register_user(payload: schemas.UserCreate, repo: repository.UserRepository =
 
 @router.post("/login", response_model=schemas.UserToken)
 def login_user(payload: schemas.UserAuthenticate, repo: repository.UserRepository = Depends(get_users_repository)):
-    user = service.authenticate_user(repo, payload.username, payload.password)
+    try:
+        user = service.authenticate_user(repo, payload.username, payload.password)
+    except AuthenticationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     token = create_access_token(user.username)
     return schemas.UserToken(
         access_token=token,
