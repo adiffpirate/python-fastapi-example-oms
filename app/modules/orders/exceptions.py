@@ -22,7 +22,3 @@ class OrderOwnershipError(OrderError):
 class OrderDeletionError(OrderError):
     """Raised when an order cannot be deleted."""
     pass
-
-
-# Re-export InvalidOrderTransition for backward compatibility
-from .service import InvalidOrderTransition
