@@ -104,3 +104,17 @@ def require_order_ownership(repo: repository.OrderRepository, order_id: int, use
     if order.user_id != user_id:
         raise OrderOwnershipError()
     return order
+
+
+def cancel_order_with_invoice(order_repo: repository.OrderRepository, payment_repo, order_id: int):
+    """Cancel an order and its associated invoice. Handles cross-module coupling."""
+    from . import service as order_svc
+    from app.modules.payment import service as payment_svc
+    from app.modules.payment.service import PaymentError
+
+    order = order_svc.cancel_order(order_repo, order_id)
+    try:
+        payment_svc.cancel_invoice_by_order_id(payment_repo, order_id)
+    except PaymentError as e:
+        raise OrderOwnershipError(str(e))
+    return order
